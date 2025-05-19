@@ -1,11 +1,11 @@
 
 # Do Not Let Low-Probability Tokens Over-Dominate in RL for LLMs
 
-**Code Implementation for Paper Submission #111 at NeurIPS 2025**
+Proposed Methods: *Advantage Reweighting (AR)* and *Low-Probability Token Isolation (Lopti)*
 
-For the convenience of reviewers, the provided code allows for reproducing the results reported in our paper with a single-line command.
+## Introduction
 
-Please note that this code is intended solely for the purpose of peer review. We kindly request that it **NOT** be distributed or used for any purpose beyond the review process.
+TBD
 
 ## Build Up Environment
 
@@ -54,3 +54,11 @@ Additionally, the baseline algorithm can be adjusted in **Line 22** of each bash
 ## Acknowledgements
 * This repository is built on top of [verl](https://github.com/volcengine/verl). We extend our gratitude to the verl team for open-sourcing such a powerful RL4LLMs framework.
 * We also sincerely acknowledge the datasets and corresponding reward function provided by [LogicRL](https://github.com/Unakar/Logic-RL), [DeepScaleR](https://github.com/agentica-project/rllm), [AdaRFT](https://github.com/limenlp/verl), and [ORZ](https://github.com/Open-Reasoner-Zero/Open-Reasoner-Zero).
+
+
+## Citation
+If you find our work useful, please consider citing our paper:
+
+```bibtex
+TBD
+```

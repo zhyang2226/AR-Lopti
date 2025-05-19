@@ -1,0 +1,5 @@
+python ./data/kk/run_change_parquet_data_source.py --input ./data/kk/instruct/3ppl/test.parquet --output ./data/kk/instruct/3ppl/test_new.parquet --data-source kk_logic3
+python ./data/kk/run_change_parquet_data_source.py --input ./data/kk/instruct/4ppl/test.parquet --output ./data/kk/instruct/4ppl/test_new.parquet --data-source kk_logic4
+python ./data/kk/run_change_parquet_data_source.py --input ./data/kk/instruct/5ppl/test.parquet --output ./data/kk/instruct/5ppl/test_new.parquet --data-source kk_logic5
+python ./data/kk/run_change_parquet_data_source.py --input ./data/kk/instruct/6ppl/test.parquet --output ./data/kk/instruct/6ppl/test_new.parquet --data-source kk_logic6
+python ./data/kk/run_change_parquet_data_source.py --input ./data/kk/instruct/7ppl/test.parquet --output ./data/kk/instruct/7ppl/test_new.parquet --data-source kk_logic7

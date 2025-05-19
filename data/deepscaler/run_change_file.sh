@@ -1,0 +1,5 @@
+python ./data/deepscaler/run_change_parquet_data_source.py --input ./data/deepscaler/aime.parquet --output data/deepscaler/aime_dsr.parquet --data-source aime_dsr
+python ./data/deepscaler/run_change_parquet_data_source.py --input ./data/deepscaler/amc.parquet --output data/deepscaler/amc_dsr.parquet --data-source amc_dsr
+python ./data/deepscaler/run_change_parquet_data_source.py --input ./data/deepscaler/math.parquet --output data/deepscaler/math_dsr.parquet --data-source math_dsr
+python ./data/deepscaler/run_change_parquet_data_source.py --input ./data/deepscaler/minerva.parquet --output data/deepscaler/minerva_dsr.parquet --data-source minerva_dsr
+python ./data/deepscaler/run_change_parquet_data_source.py --input ./data/deepscaler/olympiad_bench.parquet --output data/deepscaler/olympiad_bench_dsr.parquet --data-source olympiad_bench_dsr

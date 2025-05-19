@@ -1,0 +1,14 @@
+code ./amlt/train_logic_rl_grpo.yaml
+code ./main_grpo_4x80GB_run1.sh
+code ./verl/trainer/config/ppo_trainer.yaml
+code ./.vscode/launch.json
+code ./verl/utils/tracking.py
+code ./verl/utils/checkpoint/checkpoint_manager.py
+code ./verl/utils/checkpoint/fsdp_checkpoint_manager.py
+code ./verl/trainer/main_ppo.py
+code ./verl/trainer/ppo/ray_trainer.py
+code ./verl/trainer/fig_plot.py
+code ./verl/trainer/ppo/core_algos.py
+code ./verl/workers/actor/dp_actor.py
+code ./verl/workers/fsdp_workers.py
+code ./verl/single_controller/ray/base.py

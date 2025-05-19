@@ -1,0 +1,196 @@
+data:
+  tokenizer: null
+  train_files: ~/data/rlhf/gsm8k/train.parquet
+  val_files_testN: ~/data/rlhf/gsm8k/test.parquet
+  val_files_testonce: ~/data/rlhf/gsm8k/test.parquet
+  # amc_files: ./data/amc/amc.parquet
+  # aime_files: ./data/aime/aime_2021_2024.parquet
+  prompt_key: prompt
+  max_prompt_length: 512
+  max_response_length: 512
+  train_batch_size: 1024
+  val_batch_size: 1312
+  return_raw_input_ids: False  # This should be set to true when the tokenizer between policy and rm differs
+  return_raw_chat: False
+
+actor_rollout_ref:
+  hybrid_engine: True
+  model:
+    path: ~/models/deepseek-llm-7b-chat
+    eval_path: None
+    eval_store_path: None
+    external_lib: null
+    override_config: { }
+    enable_gradient_checkpointing: False
+    use_remove_padding: False
+  actor:
+    strategy: fsdp  # This is for backward-compatibility
+    ppo_mini_batch_size: 256
+    ppo_micro_batch_size: 64
+    use_dynamic_bsz: False
+    ppo_max_token_len_per_gpu: 16384 # n * ${data.max_prompt_length} + ${data.max_response_length}
+    grad_clip: 1.0
+    clip_ratio: 0.2
+    clip_ratio_low: 0.2
+    clip_ratio_high: 0.2
+    clip_ratio_c: 3.0 # lower bound of the value for Dual-clip PPO from https://arxiv.org/pdf/1912.09729
+    loss_agg_mode: "token-mean" #  / "seq-mean-token-sum" / "seq-mean-token-mean"
+    entropy_coeff: 0.0
+    use_kl_loss: False # True for GRPO
+    kl_loss_coef: 0.001 # for grpo
+    kl_loss_type: kl # for grpo
+    ppo_epochs: 1
+    shuffle: False
+    ulysses_sequence_parallel_size: 1 # sp size
+    importance_sampling: "on" # "on" or "off" or "off_for_pos"
+    checkpoint:
+      contents: ['model', 'hf_model', 'optimizer', 'extra']
+    optim:
+      lr: 1e-6
+      lr_warmup_steps_ratio: 0.  # the total steps will be injected during runtime
+      min_lr_ratio: null   # only useful for warmup with cosine
+      warmup_style: constant  # select from constant/cosine
+      total_training_steps: -1  # must be override by program
+      type: adamw # choose from adamw or adam or sgd or RMSProp
+    fsdp_config:
+      wrap_policy:
+        # transformer_layer_cls_to_wrap: None
+        min_num_params: 0
+      param_offload: False
+      grad_offload: False
+      optimizer_offload: False
+      fsdp_size: -1
+  ref:
+    fsdp_config:
+      param_offload: False
+      wrap_policy:
+        # transformer_layer_cls_to_wrap: None
+        min_num_params: 0
+      fsdp_size: -1
+    log_prob_micro_batch_size: 128
+    log_prob_use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+    log_prob_max_token_len_per_gpu: ${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}
+    ulysses_sequence_parallel_size: ${actor_rollout_ref.actor.ulysses_sequence_parallel_size} # sp size
+  rollout:
+    name: vllm
+    temperature: 1.0
+    top_k: -1 # 0 for hf rollout, -1 for vllm rollout
+    top_p: 1
+    prompt_length: ${data.max_prompt_length}  # not use for opensource
+    response_length: ${data.max_response_length}
+    # for vllm rollout
+    dtype: bfloat16 # should align with FSDP
+    gpu_memory_utilization: 0.5
+    ignore_eos: False
+    enforce_eager: True
+    free_cache_engine: True
+    load_format: dummy_dtensor
+    tensor_model_parallel_size: 2
+    max_num_batched_tokens: 8192
+    max_num_seqs: 1024
+    log_prob_micro_batch_size: 128
+    log_prob_use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+    log_prob_max_token_len_per_gpu: ${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}
+    # for hf rollout
+    do_sample: True
+    # number of responses (i.e. num sample times)
+    n: 1 # > 1 for grpo
+    n_val: 1 # > 1 for AIME
+
+critic:
+  strategy: fsdp
+  optim:
+    lr: 1e-5
+    lr_warmup_steps_ratio: 0.  # the total steps will be injected during runtime
+    min_lr_ratio: null   # only useful for warmup with cosine
+    warmup_style: constant  # select from constant/cosine
+    total_training_steps: -1  # must be override by program
+  model:
+    path: ~/models/deepseek-llm-7b-chat
+    tokenizer_path: ${actor_rollout_ref.model.path}
+    override_config: { }
+    external_lib: ${actor_rollout_ref.model.external_lib}
+    enable_gradient_checkpointing: False
+    use_remove_padding: False
+    fsdp_config:
+      param_offload: False
+      grad_offload: False
+      optimizer_offload: False
+      wrap_policy:
+        # transformer_layer_cls_to_wrap: None
+        min_num_params: 0
+      fsdp_size: -1
+  ppo_mini_batch_size: ${actor_rollout_ref.actor.ppo_mini_batch_size}
+  ppo_micro_batch_size: 64
+  forward_micro_batch_size: ${critic.ppo_micro_batch_size}
+  use_dynamic_bsz: ${actor_rollout_ref.actor.use_dynamic_bsz}
+  ppo_max_token_len_per_gpu: 32768 # (${actor_rollout_ref.actor.ppo_max_token_len_per_gpu}) * 2
+  forward_max_token_len_per_gpu: ${critic.ppo_max_token_len_per_gpu}
+  ulysses_sequence_parallel_size: 1 # sp size
+  ppo_epochs: ${actor_rollout_ref.actor.ppo_epochs}
+  shuffle: ${actor_rollout_ref.actor.shuffle}
+  grad_clip: 1.0
+  cliprange_value: 0.5
+
+reward_model:
+  enable: False
+  strategy: fsdp
+  model:
+    input_tokenizer: ${actor_rollout_ref.model.path}  # set this to null if the chat template is identical
+    path: ~/models/FsfairX-LLaMA3-RM-v0.1
+    external_lib: ${actor_rollout_ref.model.external_lib}
+    use_remove_padding: False
+    fsdp_config:
+      min_num_params: 0
+      param_offload: False
+  micro_batch_size: 64
+  max_length: null
+  ulysses_sequence_parallel_size: 1 # sp size
+  use_dynamic_bsz: ${critic.use_dynamic_bsz}
+  forward_max_token_len_per_gpu: ${critic.forward_max_token_len_per_gpu}
+
+algorithm:
+  gamma: 1.0
+  lam: 1.0
+  adv_estimator: gae
+  kl_penalty: kl  # how to estimate kl divergence
+  kl_ctrl:
+    type: fixed
+    kl_coef: 0.001
+  plot_dist: False
+  plot_fig_type: "prob_stat"  # "prob_histogram" or "prob_stat"
+  samples_retemp: False  # whether to retemp the rejected samples
+  retemp_method: "prob_threshold"  # "chosen_reject" or "prob_threshold" or "prob_threshold_chosen_reject"
+  reject_samples_retemp_value: 1.1  # the retemp value
+  chosen_samples_retemp_value: 0.9  # the retemp value
+  prob_threshold: 0.9  # the threshold for retemp
+  above_threshold_retemp_value: 1.1  # the retemp value
+  below_threshold_retemp_value: 0.9  # the retemp value
+  samples_reweight: False
+  reweight_method: "negative_sigmoid" # "negative_sigmoid" or "both_sigmoid"
+  reweight_k: 5.0
+  reweight_tau: 0.4
+  neg_adv_weight: 0.8
+  seperate_updating: False
+  seperate_prob: 0.5     # the probability of updating samples separately  (+ for low-prob first , - for high-prob first)
+  seperate_portion: 0.5  # the portion of samples to be updated separately (+ for low-prob first , - for high-prob first)
+
+trainer:
+  total_epochs: 30
+  total_training_steps: null
+  project_name: verl_examples
+  experiment_name: gsm8k
+  logger: [ 'console', 'wandb' ]
+  nnodes: 1
+  n_gpus_per_node: 8
+  save_freq: -1
+  test_freq: -1
+  math_test_freq: -1
+  total_steps: -1
+  critic_warmup: 0
+  default_hdfs_dir: ~/experiments/gsm8k/ppo/${trainer.experiment_name}
+  default_local_dir: checkpoints/${trainer.project_name}/${trainer.experiment_name}
+  resume_mode: auto
+  del_local_ckpt_after_load: False
+  remove_previous_ckpt_in_save: False
+  val_before_train: True
